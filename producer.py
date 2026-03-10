@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import os
 
 from aiokafka import AIOKafkaProducer
 from aiokafka.admin import AIOKafkaAdminClient, NewTopic
@@ -8,7 +9,7 @@ from aiokafka.errors import KafkaError, TopicAlreadyExistsError
 
 logger = logging.getLogger(__name__)
 
-BOOTSTRAP_SERVERS = "localhost:19092"
+BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "localhost:19092")
 TOPIC = "stocks-aggs"
 FLUSH_INTERVAL = 0.1  # seconds — batch and send every 100ms
 

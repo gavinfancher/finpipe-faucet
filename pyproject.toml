@@ -10,6 +10,7 @@ dependencies = [
     "httpx>=0.28.0",
     "massive>=2.3.2",
     "python-dotenv>=1.2.2",
+    "redis>=5.0.0",
     "rich>=13.0.0",
     "uvicorn>=0.34.0",
 ]
