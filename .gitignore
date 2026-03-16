@@ -6,6 +6,8 @@ dist/
 wheels/
 *.egg-info
 
+
+
 # Virtual environments
 .venv
 
@@ -17,3 +19,9 @@ wheels/
 ui-src/node_modules/
 ui-src/dist/
 ui-src/.vite/
+
+
+# other
+.DS_Store
+.claude
+.python-version
