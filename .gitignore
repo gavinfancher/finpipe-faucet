@@ -12,3 +12,8 @@ wheels/
 
 # secrets
 .env
+
+# Node / frontend
+ui-src/node_modules/
+ui-src/dist/
+ui-src/.vite/

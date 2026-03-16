@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <rect width="32" height="32" rx="4" fill="#141414" stroke="#2a2a2a" stroke-width="1"/>
+  <text
+    x="16" y="23"
+    text-anchor="middle"
+    fill="#6ee86e"
+    font-family="'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace"
+    font-size="21"
+    font-weight="700"
+  >f</text>
+</svg>
