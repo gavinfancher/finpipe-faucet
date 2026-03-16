@@ -25,3 +25,4 @@ ui-src/.vite/
 .DS_Store
 .claude
 .python-version
+uv.lock
