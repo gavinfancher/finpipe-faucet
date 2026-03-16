@@ -94,6 +94,31 @@ export default function Dashboard({ username, onLogout }: Props) {
     onLogout();
   }
 
+  const lastTickAt = useRef<number | null>(null);
+  const [elapsed, setElapsed] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (status === "connected") lastTickAt.current = Date.now();
+  }, [status]);
+
+  useEffect(() => {
+    if (Object.keys(ticks).length > 0) lastTickAt.current = Date.now();
+  }, [ticks]);
+
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (lastTickAt.current === null) { setElapsed(null); return; }
+      setElapsed(Math.floor((Date.now() - lastTickAt.current) / 1000));
+    }, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  function formatMmSs(s: number): string {
+    const mm = Math.floor(s / 60).toString().padStart(2, "0");
+    const ss = (s % 60).toString().padStart(2, "0");
+    return `${mm}:${ss}`;
+  }
+
   const displayList = availableTickers.slice().sort();
   const noData = displayList.length === 0;
 
@@ -155,7 +180,6 @@ export default function Dashboard({ username, onLogout }: Props) {
                   <th className="th th--right">price</th>
                   <th className="th th--right">change</th>
                   <th className="th th--right">change %</th>
-                  <th className="th th--right">volume</th>
                   <th className="th" />
                 </tr>
               </thead>
@@ -181,6 +205,16 @@ export default function Dashboard({ username, onLogout }: Props) {
         <span className="statusbar-label">{STATUS_LABEL[status].toLowerCase()}</span>
         <span className="statusbar-sep">·</span>
         <span className="statusbar-label">ws://{window.location.hostname}:8080</span>
+        {market.session !== "market open" && (
+          <>
+            <span className="statusbar-sep">·</span>
+            <span className="statusbar-label statusbar-label--muted">
+              {elapsed === null || elapsed < 2
+                ? "updated --:-- ago"
+                : `updated ${formatMmSs(elapsed)} ago`}
+            </span>
+          </>
+        )}
       </footer>
     </div>
   );

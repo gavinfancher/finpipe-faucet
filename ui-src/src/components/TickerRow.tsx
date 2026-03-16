@@ -9,12 +9,6 @@ interface Props {
   onRemove: () => void;
 }
 
-function formatVolume(v: number): string {
-  if (v >= 1_000_000) return (v / 1_000_000).toFixed(2) + "M";
-  if (v >= 1_000) return (v / 1_000).toFixed(1) + "K";
-  return String(v);
-}
-
 interface DropdownPos { top: number; right: number; }
 
 export default function TickerRow({ ticker, tick, prevPrice, onRemove }: Props) {
@@ -78,7 +72,6 @@ export default function TickerRow({ ticker, tick, prevPrice, onRemove }: Props) 
       <td className="cell cell--num" style={{ color: changeColor }}>
         {tick ? `${up ? "+" : ""}${tick.changePct.toFixed(3)}%` : "—"}
       </td>
-      <td className="cell cell--muted">{tick ? formatVolume(tick.volume) : "—"}</td>
       <td className="cell cell--action">
         <button
           ref={triggerRef}

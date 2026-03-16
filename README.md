@@ -1,6 +1,6 @@
 # finpipe-stream
 
-Real-time equity price streaming pipeline. Connects to the [Massive](https://massivefinancial.com) WebSocket feed, enriches data, fans it through Kafka, and broadcasts to clients over WebSocket.
+Real-time equity price streaming pipeline. Connects to the [Massive](https://massive.com) WebSocket feed, enriches data, fans it through Kafka, and broadcasts to clients over WebSocket.
 
 ## Architecture
 

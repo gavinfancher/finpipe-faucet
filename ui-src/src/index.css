@@ -377,6 +377,9 @@ html, body, #root {
   color: var(--text-muted);
   letter-spacing: 0.04em;
 }
+.statusbar-label--muted {
+  opacity: 0.5;
+}
 
 .statusbar-sep {
   color: var(--border);
