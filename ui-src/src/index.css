@@ -235,7 +235,7 @@ html, body, #root {
   .topbar {
     flex-wrap: wrap;
     height: auto;
-    padding: 10px 14px;
+    padding: 10px 12px;
     gap: 10px;
     row-gap: 8px;
   }
@@ -252,6 +252,7 @@ html, body, #root {
   }
 
   .search-wrap {
+    width: 100%;
     max-width: 100%;
   }
 
@@ -279,7 +280,7 @@ html, body, #root {
   padding: 0 10px;
   gap: 6px;
   height: 32px;
-  width: 100%;
+  width: 320px;
   max-width: 100%;
   transition: border-color 0.15s;
   position: relative;

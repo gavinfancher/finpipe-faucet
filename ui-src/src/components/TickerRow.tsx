@@ -2,6 +2,12 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { StockTick } from "../types";
 
+function formatVol(v: number): string {
+  if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
+  if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
+  return v.toString();
+}
+
 interface Props {
   ticker: string;
   tick?: StockTick;
@@ -71,6 +77,9 @@ export default function TickerRow({ ticker, tick, prevPrice, onRemove }: Props) 
       </td>
       <td className="cell cell--num" style={{ color: changeColor }}>
         {tick ? `${up ? "+" : ""}${tick.changePct.toFixed(3)}%` : "—"}
+      </td>
+      <td className="cell cell--num cell--muted">
+        {tick?.volume != null ? formatVol(tick.volume) : "—"}
       </td>
       <td className="cell cell--action">
         <button

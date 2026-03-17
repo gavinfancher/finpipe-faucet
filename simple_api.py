@@ -62,6 +62,7 @@ async def handle_msg(msgs):
             "change": change,
             "changePct": change_pct,
             "timestamp": m.end_timestamp or 0,
+            "volume": m.accumulated_volume or 0,
         }
         ticks[display_ticker] = tick
         logger.info("broadcasting tick: %s price=%s to %d clients", display_ticker, tick["price"], len(connections))

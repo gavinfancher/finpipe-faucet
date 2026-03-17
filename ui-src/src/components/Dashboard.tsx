@@ -180,6 +180,7 @@ export default function Dashboard({ username, onLogout }: Props) {
                   <th className="th th--right">price</th>
                   <th className="th th--right">change</th>
                   <th className="th th--right">change %</th>
+                  <th className="th th--right">vol.</th>
                   <th className="th" />
                 </tr>
               </thead>

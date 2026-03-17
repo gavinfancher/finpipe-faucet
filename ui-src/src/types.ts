@@ -5,6 +5,7 @@ export interface StockTick {
   change: number;
   changePct: number;
   timestamp: number;
+  volume?: number;
 }
 
 export interface SnapshotMessage {
