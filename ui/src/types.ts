@@ -4,6 +4,7 @@ export interface StockTick {
   open: number;
   change: number;
   changePct: number;
+  prevClose?: number;
   timestamp: number;
   volume?: number;
 }

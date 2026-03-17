@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type KeyboardEvent } from "react";
+import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
 import { useStockWebSocket } from "../hooks/useStockWebSocket";
 import { useMarketStatus } from "../hooks/useMarketStatus";
 import { clearCurrentUsername } from "../store/userStore";
@@ -24,7 +24,7 @@ const STATUS_DOT: Record<string, string> = {
 const API = `http://${window.location.hostname}:8080`;
 
 export default function Dashboard({ username, onLogout }: Props) {
-  const { ticks, availableTickers, status } = useStockWebSocket();
+  const { ticks, status } = useStockWebSocket();
   const market = useMarketStatus();
   const prevPrices = useRef<Record<string, number>>({});
   const [, forceUpdate] = useState(0);
@@ -32,6 +32,17 @@ export default function Dashboard({ username, onLogout }: Props) {
   const [searchFeedback, setSearchFeedback] = useState<{ msg: string; ok: boolean } | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [userTickers, setUserTickers] = useState<string[]>([]);
+
+  const fetchUserTickers = useCallback(async () => {
+    const res = await fetch(`${API}/users/${username}/tickers`);
+    const data = await res.json();
+    setUserTickers(data.tickers ?? []);
+  }, [username]);
+
+  useEffect(() => {
+    fetchUserTickers();
+  }, [fetchUserTickers]);
 
   // Press / anywhere to focus the search bar
   useEffect(() => {
@@ -67,12 +78,14 @@ export default function Dashboard({ username, onLogout }: Props) {
       showFeedback(`"${ticker}" invalid ticker`, false);
       return;
     }
-    if (availableTickers.includes(ticker)) {
+    if (userTickers.includes(ticker)) {
       showFeedback(`${ticker} already subscribed`, false);
       setSearchQuery("");
       return;
     }
-    await fetch(`${API}/subscriptions/${ticker}`, { method: "PUT" });
+    const res = await fetch(`${API}/users/${username}/tickers/${ticker}`, { method: "PUT" });
+    const data = await res.json();
+    setUserTickers(data.tickers ?? []);
     showFeedback(`${ticker} added`, true);
     setSearchQuery("");
   }
@@ -119,7 +132,7 @@ export default function Dashboard({ username, onLogout }: Props) {
     return `${mm}:${ss}`;
   }
 
-  const displayList = availableTickers.slice().sort();
+  const displayList = userTickers.slice().sort();
   const noData = displayList.length === 0;
 
   return (
@@ -191,7 +204,11 @@ export default function Dashboard({ username, onLogout }: Props) {
                     ticker={ticker}
                     tick={ticks[ticker]}
                     prevPrice={prevPrices.current[ticker]}
-                    onRemove={() => fetch(`${API}/subscriptions/${ticker}`, { method: "DELETE" })}
+                    onRemove={async () => {
+                      const res = await fetch(`${API}/users/${username}/tickers/${ticker}`, { method: "DELETE" });
+                      const data = await res.json();
+                      setUserTickers(data.tickers ?? []);
+                    }}
                   />
                 ))}
               </tbody>
