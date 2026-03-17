@@ -17,7 +17,7 @@ export function useStockWebSocket() {
     if (unmounted.current) return;
     setStatus("connecting");
 
-    const ws = new WebSocket(`ws://${window.location.hostname}:8080`);
+    const ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
     wsRef.current = ws;
 
     ws.onopen = () => {
@@ -27,6 +27,7 @@ export function useStockWebSocket() {
 
     ws.onmessage = (event: MessageEvent<string>) => {
       if (unmounted.current) return;
+      setStatus("connected");
       try {
         const msg: ServerMessage = JSON.parse(event.data);
         if (msg.type === "snapshot") {

@@ -16,9 +16,9 @@ wheels/
 .env
 
 # Node / frontend
-ui-src/node_modules/
-ui-src/dist/
-ui-src/.vite/
+ui/node_modules/
+ui/dist/
+ui/.vite/
 
 
 # other

@@ -1,3 +1,13 @@
+"""
+Consumer: connects to Massive and streams ticks to the producer.
+
+The producer connects via WS /stream and can send subscription commands:
+  {"action": "subscribe",   "ticker": "AAPL"}
+  {"action": "unsubscribe", "ticker": "AAPL"}
+
+Run: uv run uvicorn consumer:app --port 9000
+"""
+
 import asyncio
 import logging
 import os
@@ -8,7 +18,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from massive import WebSocketClient
-from massive.websocket.models import Feed, Market, EquityAgg
+from massive.websocket.models import EquityAgg, Feed, Market
 
 load_dotenv(Path(__file__).parent / ".env")
 
@@ -23,7 +33,9 @@ client = WebSocketClient(
 
 ticks: dict = {}
 subscriptions: set[str] = set()
-connections: set[WebSocket] = set()
+producers: set[WebSocket] = set()
+
+DEFAULT_TICKERS = ["A.SPY"]
 
 
 def normalize(ticker: str) -> str:
@@ -35,18 +47,16 @@ def normalize(ticker: str) -> str:
 
 async def broadcast(data: dict):
     dead = set()
-    for ws in connections:
+    for ws in producers:
         try:
             await ws.send_json(data)
         except Exception:
             dead.add(ws)
-    connections.difference_update(dead)
+    producers.difference_update(dead)
 
 
 async def handle_msg(msgs):
-    logger.info("handle_msg called with %d messages", len(msgs))
     for m in msgs:
-        logger.info("  msg type=%s", type(m).__name__)
         if not isinstance(m, EquityAgg):
             continue
         if m.symbol is None or m.close is None:
@@ -65,11 +75,7 @@ async def handle_msg(msgs):
             "volume": m.accumulated_volume or 0,
         }
         ticks[display_ticker] = tick
-        logger.info("broadcasting tick: %s price=%s to %d clients", display_ticker, tick["price"], len(connections))
         await broadcast({"type": "tick", "tick": tick})
-
-
-DEFAULT_TICKERS = ["A.SPY"]
 
 
 async def run_massive():
@@ -109,47 +115,48 @@ app.add_middleware(
 )
 
 
-@app.websocket("/")
-async def ws_endpoint(ws: WebSocket):
+@app.websocket("/stream")
+async def stream_endpoint(ws: WebSocket):
     await ws.accept()
-    connections.add(ws)
-    logger.info("WS connected, pool=%d", len(connections))
+    producers.add(ws)
+    logger.info("producer connected, pool=%d", len(producers))
     try:
         if ticks:
             await ws.send_json({"type": "snapshot", "ticks": ticks})
         display_subs = sorted(s.removeprefix("A.") for s in subscriptions)
         await ws.send_json({"type": "tickers", "tickers": display_subs})
+
+        # Listen for subscription commands from the producer
         while True:
-            await ws.receive_text()
+            data = await ws.receive_json()
+            action = data.get("action")
+            ticker = data.get("ticker", "")
+            sub = normalize(ticker)
+            if action == "subscribe" and sub not in subscriptions:
+                subscriptions.add(sub)
+                client.subscribe(sub)
+                logger.info("subscribed: %s", sub)
+                display_subs = sorted(s.removeprefix("A.") for s in subscriptions)
+                await broadcast({"type": "tickers", "tickers": display_subs})
+            elif action == "unsubscribe":
+                subscriptions.discard(sub)
+                ticks.pop(ticker.upper(), None)
+                client.unsubscribe(sub)
+                logger.info("unsubscribed: %s", sub)
+                display_subs = sorted(s.removeprefix("A.") for s in subscriptions)
+                await broadcast({"type": "tickers", "tickers": display_subs})
     except Exception:
         pass
     finally:
-        connections.discard(ws)
-        logger.info("WS closed, pool=%d", len(connections))
+        producers.discard(ws)
+        logger.info("producer disconnected, pool=%d", len(producers))
 
 
-@app.get("/subscriptions")
-def get_subscriptions():
-    return {"subscriptions": sorted(subscriptions)}
-
-
-@app.put("/subscriptions/{ticker}")
-async def add_subscription(ticker: str):
-    sub = normalize(ticker)
-    if sub not in subscriptions:
-        subscriptions.add(sub)
-        client.subscribe(sub)
-        display_subs = sorted(s.removeprefix("A.") for s in subscriptions)
-        await broadcast({"type": "tickers", "tickers": display_subs})
-    return {"subscriptions": sorted(subscriptions)}
-
-
-@app.delete("/subscriptions/{ticker}")
-async def remove_subscription(ticker: str):
-    sub = normalize(ticker)
-    subscriptions.discard(sub)
-    ticks.pop(sub.removeprefix("A."), None)
-    client.unsubscribe(sub)
-    display_subs = sorted(s.removeprefix("A.") for s in subscriptions)
-    await broadcast({"type": "tickers", "tickers": display_subs})
-    return {"subscriptions": sorted(subscriptions)}
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "subscriptions": sorted(subscriptions),
+        "tick_count": len(ticks),
+        "producers": len(producers),
+    }

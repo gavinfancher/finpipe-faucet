@@ -245,10 +245,11 @@ html, body, #root {
   .topbar-status { order: 2; }
   .topbar-right  { order: 3; gap: 8px; margin-left: auto; }
 
-  /* Row 2: search full width */
+  /* Row 2: search full width, centered */
   .topbar-center {
     order: 4;
     flex: 1 1 100%;
+    justify-content: center;
   }
 
   .search-wrap {
@@ -256,16 +257,16 @@ html, body, #root {
     max-width: 100%;
   }
 
-  .username-badge { font-size: 10px; padding: 3px 7px; }
+  .username-badge { font-size: 11px; }
 }
 
 .username-badge {
   background: var(--bg-elevated);
   color: var(--text-muted);
   border: 1px solid var(--border);
-  border-radius: 3px;
-  padding: 3px 10px;
-  font-size: 11px;
+  border-radius: var(--radius-sm);
+  padding: 5px 11px;
+  font-size: 12px;
   font-weight: 600;
   letter-spacing: 0.04em;
 }
@@ -413,8 +414,7 @@ html, body, #root {
   padding: 10px 16px;
   font-size: 10px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.04em;
   color: var(--text-muted);
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);

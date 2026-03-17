@@ -136,7 +136,7 @@ export default function Dashboard({ username, onLogout }: Props) {
               ref={searchRef}
               className="search-input"
               type="text"
-              placeholder="Add ticker…"
+              placeholder="add ticker…"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value.replace(/^\//, ""))}
               onKeyDown={handleSearchKeyDown}
@@ -180,7 +180,7 @@ export default function Dashboard({ username, onLogout }: Props) {
                   <th className="th th--right">price</th>
                   <th className="th th--right">change</th>
                   <th className="th th--right">change %</th>
-                  <th className="th th--right">vol.</th>
+                  <th className="th th--right">volume</th>
                   <th className="th" />
                 </tr>
               </thead>
