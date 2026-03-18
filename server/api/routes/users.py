@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
 import server.auth as auth
@@ -16,13 +16,13 @@ class TickerPatch(BaseModel):
     remove: list[str] = []
 
 
-@router.get("/tickers")
+@router.get("/tickers/list")
 async def get_tickers(current_user: str = Depends(get_current_user_flexible)):
     tickers = await db.get_user_tickers(current_user)
     return {"username": current_user, "tickers": tickers}
 
 
-@router.put("/tickers/{ticker}")
+@router.post("/tickers/{ticker}")
 async def add_ticker(ticker: str, current_user: str = Depends(get_current_user)):
     ticker = ticker.upper()
     await db.add_user_ticker(current_user, ticker)
@@ -31,14 +31,14 @@ async def add_ticker(ticker: str, current_user: str = Depends(get_current_user))
         close = await fetch_prev_close(ticker)
         if close is not None:
             state.prev_closes[ticker] = close
-    return {"ok": True}
+    return {"message": "success"}
 
 
 @router.delete("/tickers/{ticker}")
 async def remove_ticker(ticker: str, current_user: str = Depends(get_current_user)):
     ticker = ticker.upper()
     await db.remove_user_ticker(current_user, ticker)
-    return {"ok": True}
+    return {"message": "success"}
 
 
 @router.patch("/tickers")
@@ -55,7 +55,7 @@ async def patch_tickers(
             close = await fetch_prev_close(ticker)
             if close is not None:
                 state.prev_closes[ticker] = close
-    return {"ok": True}
+    return {"message": "success"}
 
 
 @router.post("/api-key")

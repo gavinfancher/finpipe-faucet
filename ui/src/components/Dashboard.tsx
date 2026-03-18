@@ -36,6 +36,8 @@ export default function Dashboard({ username, token, onLogout }: Props) {
   const searchRef = useRef<HTMLInputElement>(null);
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [userTickers, setUserTickers] = useState<string[]>([]);
+  const [sortKey, setSortKey] = useState<"ticker" | "changePct" | "perf5d" | "perfYtd">("changePct");
+  const [sortDir, setSortDir] = useState<1 | -1>(-1);
 
   // menu
   const menuRef = useRef<HTMLButtonElement>(null);
@@ -48,7 +50,7 @@ export default function Dashboard({ username, token, onLogout }: Props) {
   const [copied, setCopied] = useState(false);
 
   const fetchUserTickers = useCallback(async () => {
-    const res = await fetch(`${API}/external/tickers`, { headers: authHeader });
+    const res = await fetch(`${API}/external/tickers/list`, { headers: authHeader });
     const data = await res.json();
     setUserTickers(data.tickers ?? []);
   }, [token]);
@@ -144,7 +146,7 @@ export default function Dashboard({ username, token, onLogout }: Props) {
       setSearchQuery("");
       return;
     }
-    await fetch(`${API}/external/tickers/${ticker}`, { method: "PUT", headers: authHeader });
+    await fetch(`${API}/external/tickers/${ticker}`, { method: "POST", headers: authHeader });
     showFeedback(`${ticker} added`, true);
     setSearchQuery("");
   }
@@ -191,7 +193,17 @@ export default function Dashboard({ username, token, onLogout }: Props) {
     return `${mm}:${ss}`;
   }
 
-  const displayList = userTickers.slice().sort();
+  function toggleSort(key: typeof sortKey) {
+    if (sortKey === key) setSortDir((d) => (d === 1 ? -1 : 1));
+    else { setSortKey(key); setSortDir(key === "ticker" ? 1 : -1); }
+  }
+
+  const displayList = userTickers.slice().sort((a, b) => {
+    if (sortKey === "ticker") return a.localeCompare(b) * sortDir;
+    const va = ticks[a]?.[sortKey] ?? -Infinity;
+    const vb = ticks[b]?.[sortKey] ?? -Infinity;
+    return (va - vb) * sortDir;
+  });
   const noData = displayList.length === 0;
 
   return (
@@ -295,12 +307,24 @@ export default function Dashboard({ username, token, onLogout }: Props) {
         ) : (
           <div className="table-wrapper">
             <table className="stock-table">
+              <colgroup>
+                <col style={{ width: "80px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "90px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "90px" }} />
+                <col style={{ width: "36px" }} />
+              </colgroup>
               <thead>
                 <tr>
-                  <th className="th">ticker</th>
+                  <th className={`th th--sortable${sortKey === "ticker" ? " th--active" : ""}`} onClick={() => toggleSort("ticker")}>ticker {sortKey === "ticker" && sortDir === -1 ? "↓" : ""}</th>
                   <th className="th th--right">price</th>
                   <th className="th th--right">change</th>
-                  <th className="th th--right">change %</th>
+                  <th className={`th th--right th--sortable${sortKey === "changePct" ? " th--active" : ""}`} onClick={() => toggleSort("changePct")}>change % {sortKey === "changePct" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
+                  <th className={`th th--right th--sortable${sortKey === "perf5d" ? " th--active" : ""}`} onClick={() => toggleSort("perf5d")}>5d % {sortKey === "perf5d" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
+                  <th className={`th th--right th--sortable${sortKey === "perfYtd" ? " th--active" : ""}`} onClick={() => toggleSort("perfYtd")}>ytd % {sortKey === "perfYtd" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
                   <th className="th th--right">volume</th>
                   <th className="th" />
                 </tr>

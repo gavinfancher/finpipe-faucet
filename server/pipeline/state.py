@@ -14,5 +14,7 @@ if TYPE_CHECKING:
 ticks: dict = {}
 subscriptions: list[str] = []
 prev_closes: dict[str, float] = {}
+closes_5d: dict[str, float] = {}
+closes_ytd: dict[str, float] = {}
 ui_clients: set[WebSocket] = set()
 _consumer_ws: websockets.ClientConnection | None = None

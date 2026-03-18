@@ -78,6 +78,12 @@ export default function TickerRow({ ticker, tick, prevPrice, onRemove }: Props) 
       <td className="cell cell--num" style={{ color: changeColor }}>
         {tick ? `${up ? "+" : ""}${tick.changePct.toFixed(3)}%` : "—"}
       </td>
+      <td className="cell cell--num" style={{ color: tick?.perf5d != null ? (tick.perf5d >= 0 ? "var(--green)" : "var(--red)") : "var(--fg-muted)" }}>
+        {tick?.perf5d != null ? `${tick.perf5d >= 0 ? "+" : ""}${tick.perf5d.toFixed(3)}%` : "—"}
+      </td>
+      <td className="cell cell--num" style={{ color: tick?.perfYtd != null ? (tick.perfYtd >= 0 ? "var(--green)" : "var(--red)") : "var(--fg-muted)" }}>
+        {tick?.perfYtd != null ? `${tick.perfYtd >= 0 ? "+" : ""}${tick.perfYtd.toFixed(3)}%` : "—"}
+      </td>
       <td className="cell cell--num cell--muted">
         {tick?.volume != null ? formatVol(tick.volume) : "—"}
       </td>

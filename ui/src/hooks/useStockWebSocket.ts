@@ -51,7 +51,7 @@ export function useStockWebSocket(token: string) {
     ws.onerror = () => {
       ws.close();
     };
-  }, []);
+  }, [token]);
 
   useEffect(() => {
     unmounted.current = false;
