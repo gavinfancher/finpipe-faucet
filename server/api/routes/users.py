@@ -5,7 +5,7 @@ import server.auth as auth
 import server.db as db
 from server.api.deps import get_current_user, get_current_user_flexible
 from server.pipeline import state
-from server.pipeline.enrichment import fetch_prev_close
+from server.pipeline.enrichment import fetch_closes
 from server.pipeline.relay import send_to_consumer
 
 router = APIRouter()
@@ -28,9 +28,13 @@ async def add_ticker(ticker: str, current_user: str = Depends(get_current_user))
     await db.add_user_ticker(current_user, ticker)
     await send_to_consumer({"action": "subscribe", "ticker": ticker})
     if ticker not in state.prev_closes:
-        close = await fetch_prev_close(ticker)
-        if close is not None:
-            state.prev_closes[ticker] = close
+        prev, ytd, close_5d = await fetch_closes(ticker)
+        if prev is not None:
+            state.prev_closes[ticker] = prev
+        if ytd is not None:
+            state.closes_ytd[ticker] = ytd
+        if close_5d is not None:
+            state.closes_5d[ticker] = close_5d
     return {"message": "success"}
 
 
@@ -52,9 +56,13 @@ async def patch_tickers(
     for ticker in add:
         await send_to_consumer({"action": "subscribe", "ticker": ticker})
         if ticker not in state.prev_closes:
-            close = await fetch_prev_close(ticker)
-            if close is not None:
-                state.prev_closes[ticker] = close
+            prev, ytd, close_5d = await fetch_closes(ticker)
+            if prev is not None:
+                state.prev_closes[ticker] = prev
+            if ytd is not None:
+                state.closes_ytd[ticker] = ytd
+            if close_5d is not None:
+                state.closes_5d[ticker] = close_5d
     return {"message": "success"}
 
 

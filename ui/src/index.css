@@ -510,17 +510,39 @@ html, body, #root {
 /* ── Main content ── */
 .main-content {
   flex: 1;
-  overflow: auto;
+  overflow: hidden;
   padding: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 /* ── Stock table ── */
-.table-wrapper {
-  overflow-x: auto;
+.table-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
+  overflow: hidden;
   background: var(--bg-surface);
 }
+
+.table-header-wrapper {
+  overflow: hidden;
+  flex-shrink: 0;
+  background: var(--bg-elevated);
+}
+
+.table-wrapper {
+  flex: 1;
+  overflow: auto;
+  scrollbar-color: var(--border) var(--bg-surface);
+}
+
+.table-wrapper::-webkit-scrollbar { width: 8px; height: 8px; }
+.table-wrapper::-webkit-scrollbar-track { background: var(--bg-surface); }
+.table-wrapper::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+.table-wrapper::-webkit-scrollbar-corner { background: var(--bg-surface); }
 
 .stock-table {
   width: 100%;
@@ -544,7 +566,7 @@ html, body, #root {
 .th:first-child {
   position: sticky;
   left: 0;
-  z-index: 2;
+  z-index: 3;
   box-shadow: 4px 0 8px var(--bg-elevated);
 }
 
