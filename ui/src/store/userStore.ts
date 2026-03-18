@@ -9,3 +9,15 @@ export function setCurrentUsername(username: string): void {
 export function clearCurrentUsername(): void {
   localStorage.removeItem("tsapp_current_user");
 }
+
+export function getToken(): string | null {
+  return localStorage.getItem("tsapp_token");
+}
+
+export function setToken(token: string): void {
+  localStorage.setItem("tsapp_token", token);
+}
+
+export function clearToken(): void {
+  localStorage.removeItem("tsapp_token");
+}

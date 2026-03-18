@@ -1,18 +1,21 @@
 import { useState, useEffect } from "react";
 import Login from "./components/Login";
 import Dashboard from "./components/Dashboard";
-import { getCurrentUsername } from "./store/userStore";
+import { getCurrentUsername, getToken, clearCurrentUsername, clearToken } from "./store/userStore";
 
 type View = "login" | "dashboard";
 
 export default function App() {
   const [view, setView] = useState<View>("login");
   const [username, setUsername] = useState<string>("");
+  const [token, setToken] = useState<string>("");
 
   useEffect(() => {
-    const existing = getCurrentUsername();
-    if (existing) {
-      setUsername(existing);
+    const existingUser = getCurrentUsername();
+    const existingToken = getToken();
+    if (existingUser && existingToken) {
+      setUsername(existingUser);
+      setToken(existingToken);
       setView("dashboard");
     }
   }, []);
@@ -20,8 +23,9 @@ export default function App() {
   if (view === "login") {
     return (
       <Login
-        onLogin={(name) => {
+        onLogin={(name, tok) => {
           setUsername(name);
+          setToken(tok);
           setView("dashboard");
         }}
       />
@@ -31,8 +35,12 @@ export default function App() {
   return (
     <Dashboard
       username={username}
+      token={token}
       onLogout={() => {
+        clearCurrentUsername();
+        clearToken();
         setUsername("");
+        setToken("");
         setView("login");
       }}
     />

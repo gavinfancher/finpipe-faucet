@@ -1,39 +1,36 @@
 """
-Consumer: connects to Massive and streams ticks to the producer.
+Ingestion node: connects to Massive and streams ticks to the relay.
 
-The producer connects via WS /stream and can send subscription commands:
+The relay connects via WS /stream and can send subscription commands:
   {"action": "subscribe",   "ticker": "AAPL"}
   {"action": "unsubscribe", "ticker": "AAPL"}
 
-Run: uv run uvicorn consumer:app --port 9000
+Run: uv run uvicorn server.ingestion.massive:app --port 9000
 """
 
 import asyncio
 import logging
-import os
 from contextlib import asynccontextmanager
-from pathlib import Path
 
-from dotenv import load_dotenv
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from massive import WebSocketClient
 from massive.websocket.models import EquityAgg, Feed, Market
 
-load_dotenv(Path(__file__).parent / ".env")
+from server.config import MASSIVE_API_KEY
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 client = WebSocketClient(
-    api_key=os.getenv("MASSIVE_API_KEY"),
+    api_key=MASSIVE_API_KEY,
     feed=Feed.Delayed,
     market=Market.Stocks,
 )
 
 ticks: dict = {}
 subscriptions: set[str] = set()
-producers: set[WebSocket] = set()
+relays: set[WebSocket] = set()
 
 DEFAULT_TICKERS = ["A.SPY"]
 
@@ -47,12 +44,12 @@ def normalize(ticker: str) -> str:
 
 async def broadcast(data: dict):
     dead = set()
-    for ws in producers:
+    for ws in relays:
         try:
             await ws.send_json(data)
         except Exception:
             dead.add(ws)
-    producers.difference_update(dead)
+    relays.difference_update(dead)
 
 
 async def handle_msg(msgs):
@@ -118,15 +115,13 @@ app.add_middleware(
 @app.websocket("/stream")
 async def stream_endpoint(ws: WebSocket):
     await ws.accept()
-    producers.add(ws)
-    logger.info("producer connected, pool=%d", len(producers))
+    relays.add(ws)
+    logger.info("relay connected, pool=%d", len(relays))
     try:
         if ticks:
             await ws.send_json({"type": "snapshot", "ticks": ticks})
         display_subs = sorted(s.removeprefix("A.") for s in subscriptions)
         await ws.send_json({"type": "tickers", "tickers": display_subs})
-
-        # Listen for subscription commands from the producer
         while True:
             data = await ws.receive_json()
             action = data.get("action")
@@ -148,8 +143,8 @@ async def stream_endpoint(ws: WebSocket):
     except Exception:
         pass
     finally:
-        producers.discard(ws)
-        logger.info("producer disconnected, pool=%d", len(producers))
+        relays.discard(ws)
+        logger.info("relay disconnected, pool=%d", len(relays))
 
 
 @app.get("/health")
@@ -158,5 +153,5 @@ def health():
         "status": "ok",
         "subscriptions": sorted(subscriptions),
         "tick_count": len(ticks),
-        "producers": len(producers),
+        "relays": len(relays),
     }

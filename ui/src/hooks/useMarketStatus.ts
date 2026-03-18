@@ -30,13 +30,13 @@ function computeStatus(): MarketStatus {
   // 16:00 – 20:00  post-market
   // 20:00 – 04:00  off hours
   if (mins >= 4 * 60 && mins < 9 * 60 + 30) {
-    return { session: "pre-market",  label: "pre-market",  dotClass: "dot--yellow", icon: "🌤" };
+    return { session: "pre-market",  label: "pre-market",  dotClass: "dot--yellow" };
   }
   if (mins >= 9 * 60 + 30 && mins < 16 * 60) {
     return { session: "market open", label: "market open", dotClass: "dot--green" };
   }
   if (mins >= 16 * 60 && mins < 20 * 60) {
-    return { session: "post-market", label: "post-market", dotClass: "dot--yellow", icon: "🌙" };
+    return { session: "post-market", label: "post-market", dotClass: "dot--purple" };
   }
   return   { session: "off hours",   label: "off hours",   dotClass: "dot--red" };
 }

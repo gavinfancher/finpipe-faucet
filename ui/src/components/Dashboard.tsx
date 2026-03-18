@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
+import { createPortal } from "react-dom";
 import { useStockWebSocket } from "../hooks/useStockWebSocket";
 import { useMarketStatus } from "../hooks/useMarketStatus";
 import { clearCurrentUsername } from "../store/userStore";
@@ -6,6 +7,7 @@ import TickerRow from "./TickerRow";
 
 interface Props {
   username: string;
+  token: string;
   onLogout: () => void;
 }
 
@@ -23,8 +25,9 @@ const STATUS_DOT: Record<string, string> = {
 
 const API = `http://${window.location.hostname}:8080`;
 
-export default function Dashboard({ username, onLogout }: Props) {
-  const { ticks, status } = useStockWebSocket();
+export default function Dashboard({ username, token, onLogout }: Props) {
+  const { ticks, status } = useStockWebSocket(token);
+  const authHeader = { Authorization: `Bearer ${token}` };
   const market = useMarketStatus();
   const prevPrices = useRef<Record<string, number>>({});
   const [, forceUpdate] = useState(0);
@@ -34,17 +37,76 @@ export default function Dashboard({ username, onLogout }: Props) {
   const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [userTickers, setUserTickers] = useState<string[]>([]);
 
+  // menu
+  const menuRef = useRef<HTMLButtonElement>(null);
+  const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
+
+  // api key modal
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [apiKey, setApiKey] = useState<string | null>(null);
+  const [apiKeyLoading, setApiKeyLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
+
   const fetchUserTickers = useCallback(async () => {
-    const res = await fetch(`${API}/users/${username}/tickers`);
+    const res = await fetch(`${API}/external/tickers`, { headers: authHeader });
     const data = await res.json();
     setUserTickers(data.tickers ?? []);
-  }, [username]);
+  }, [token]);
 
   useEffect(() => {
     fetchUserTickers();
+    const id = setInterval(fetchUserTickers, 5000);
+    return () => clearInterval(id);
   }, [fetchUserTickers]);
 
-  // Press / anywhere to focus the search bar
+  // close menu on outside click/scroll
+  useEffect(() => {
+    if (!menuPos) return;
+    function close() { setMenuPos(null); }
+    document.addEventListener("pointerdown", close);
+    document.addEventListener("scroll", close, true);
+    return () => {
+      document.removeEventListener("pointerdown", close);
+      document.removeEventListener("scroll", close, true);
+    };
+  }, [menuPos]);
+
+  function openMenu(e: React.MouseEvent) {
+    e.stopPropagation();
+    if (menuPos) { setMenuPos(null); return; }
+    const rect = menuRef.current!.getBoundingClientRect();
+    setMenuPos({ top: rect.bottom + 6, right: window.innerWidth - rect.right });
+  }
+
+  async function generateApiKey() {
+    setApiKeyLoading(true);
+    try {
+      const res = await fetch(`${API}/external/api-key`, {
+        method: "POST",
+        headers: authHeader,
+      });
+      const data = await res.json();
+      setApiKey(data.api_key ?? null);
+    } finally {
+      setApiKeyLoading(false);
+    }
+  }
+
+  function copyKey() {
+    if (!apiKey) return;
+    navigator.clipboard.writeText(apiKey);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  function openApiKeyModal() {
+    setMenuPos(null);
+    setApiKey(null);
+    setCopied(false);
+    setShowApiKey(true);
+  }
+
+  // press / to focus search
   useEffect(() => {
     function onKeyDown(e: globalThis.KeyboardEvent) {
       if (e.key !== "/") return;
@@ -73,7 +135,6 @@ export default function Dashboard({ username, onLogout }: Props) {
     if (e.key !== "Enter") return;
     const ticker = searchQuery.trim().toUpperCase();
     if (!ticker) return;
-
     if (!/^[A-Z]{1,5}$/.test(ticker)) {
       showFeedback(`"${ticker}" invalid ticker`, false);
       return;
@@ -83,14 +144,12 @@ export default function Dashboard({ username, onLogout }: Props) {
       setSearchQuery("");
       return;
     }
-    const res = await fetch(`${API}/users/${username}/tickers/${ticker}`, { method: "PUT" });
-    const data = await res.json();
-    setUserTickers(data.tickers ?? []);
+    await fetch(`${API}/external/tickers/${ticker}`, { method: "PUT", headers: authHeader });
     showFeedback(`${ticker} added`, true);
     setSearchQuery("");
   }
 
-  // Track previous prices for flash animation
+  // track previous prices for flash animation
   useEffect(() => {
     forceUpdate((n) => n + 1);
     const t = setTimeout(() => {
@@ -164,18 +223,67 @@ export default function Dashboard({ username, onLogout }: Props) {
           </div>
         </div>
         <div className="topbar-status">
-          {market.icon
-            ? <span className="market-icon">{market.icon}</span>
-            : <span className={`status-dot ${market.dotClass}`} />}
+          <span className={`status-dot ${market.dotClass}`} />
           <span className="status-label">{market.label}</span>
         </div>
         <div className="topbar-right">
           <span className="username-badge">{username}</span>
-          <button className="btn-ghost btn-logout" onClick={handleLogout}>
-            sign out
+          <button ref={menuRef} className="hamburger" onClick={openMenu} aria-label="menu" data-1p-ignore>
+            <span /><span /><span />
           </button>
         </div>
       </header>
+
+      {/* Hamburger dropdown */}
+      {menuPos && createPortal(
+        <div
+          className="user-menu-dropdown"
+          style={{ position: "fixed", top: menuPos.top, right: menuPos.right }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          <button className="user-menu-item" onClick={openApiKeyModal}>
+            api key
+          </button>
+          <button className="user-menu-item user-menu-item--danger" onClick={handleLogout}>
+            sign out
+          </button>
+        </div>,
+        document.body
+      )}
+
+      {/* API key modal */}
+      {showApiKey && createPortal(
+        <div className="modal-overlay" onClick={() => setShowApiKey(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} data-1p-ignore>
+            <div className="modal-header">
+              <h2 className="modal-title">api key</h2>
+              <button className="btn-icon" onClick={() => setShowApiKey(false)}>✕</button>
+            </div>
+
+            <div className="apikey-body">
+              {apiKey ? (
+                <>
+                  <p className="apikey-note">copy your key now — it won't be shown again.</p>
+                  <div className="apikey-display">
+                    <code className="apikey-value">{apiKey}</code>
+                    <button className="btn-ghost btn-ghost--sm" onClick={copyKey}>
+                      {copied ? "copied!" : "copy"}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <p className="apikey-note">generate an api key to update your watchlist programmatically. generating a new key invalidates the previous one.</p>
+                  <button className="btn-primary" onClick={generateApiKey} disabled={apiKeyLoading}>
+                    {apiKeyLoading ? "generating…" : "generate key"}
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Main content */}
       <main className="main-content">
@@ -205,9 +313,8 @@ export default function Dashboard({ username, onLogout }: Props) {
                     tick={ticks[ticker]}
                     prevPrice={prevPrices.current[ticker]}
                     onRemove={async () => {
-                      const res = await fetch(`${API}/users/${username}/tickers/${ticker}`, { method: "DELETE" });
-                      const data = await res.json();
-                      setUserTickers(data.tickers ?? []);
+                      await fetch(`${API}/external/tickers/${ticker}`, { method: "DELETE", headers: authHeader });
+                      await fetchUserTickers();
                     }}
                   />
                 ))}

@@ -5,7 +5,7 @@ const RECONNECT_DELAY_MS = 3000;
 
 export type ConnectionStatus = "connecting" | "connected" | "disconnected";
 
-export function useStockWebSocket() {
+export function useStockWebSocket(token: string) {
   const [ticks, setTicks] = useState<Record<string, StockTick>>({});
   const [availableTickers, setAvailableTickers] = useState<string[]>([]);
   const [status, setStatus] = useState<ConnectionStatus>("connecting");
@@ -17,7 +17,7 @@ export function useStockWebSocket() {
     if (unmounted.current) return;
     setStatus("connecting");
 
-    const ws = new WebSocket(`ws://${window.location.hostname}:8080/ws`);
+    const ws = new WebSocket(`ws://${window.location.hostname}:8080/ws?token=${token}`);
     wsRef.current = ws;
 
     ws.onopen = () => {

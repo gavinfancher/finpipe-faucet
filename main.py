@@ -1,8 +1,8 @@
 """
 Starts all three services:
-  consumer  — connects to Massive API          (port 9000)
-  producer  — serves data to the UI            (port 8080)
-  ui        — vite dev server                  (port 5173)
+  ingestion  — connects to Massive API          (port 9000)
+  api        — serves data to the UI            (port 8080)
+  ui         — vite dev server                  (port 5173)
 
 Run: uv run python main.py
 """
@@ -21,20 +21,20 @@ DIM   = "\033[2m"
 
 SERVICES = [
     {
-        "name": "consumer",
-        "label": f"\033[36m{BOLD}consumer{RESET}",   # cyan
-        "cmd": ["uv", "run", "uvicorn", "consumer:app", "--port", "9000"],
+        "name": "ingestion",
+        "label": f"\033[36m{BOLD}ingestion{RESET}",   # cyan
+        "cmd": ["uv", "run", "uvicorn", "server.ingestion.massive:app", "--port", "9000"],
         "cwd": ROOT,
     },
     {
-        "name": "producer",
-        "label": f"\033[33m{BOLD}producer{RESET}",   # yellow
-        "cmd": ["uv", "run", "uvicorn", "producer:app", "--port", "8080", "--host", "0.0.0.0"],
+        "name": "api",
+        "label": f"\033[33m{BOLD}      api{RESET}",   # yellow
+        "cmd": ["uv", "run", "uvicorn", "server.api.app:app", "--port", "8080", "--host", "0.0.0.0"],
         "cwd": ROOT,
     },
     {
         "name": "ui",
-        "label": f"\033[35m{BOLD}      ui{RESET}",   # magenta
+        "label": f"\033[35m{BOLD}       ui{RESET}",   # magenta
         "cmd": ["npm", "run", "dev"],
         "cwd": ROOT / "ui",
     },
