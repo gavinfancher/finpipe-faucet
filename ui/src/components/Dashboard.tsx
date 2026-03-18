@@ -4,6 +4,7 @@ import { useStockWebSocket } from "../hooks/useStockWebSocket";
 import { useMarketStatus } from "../hooks/useMarketStatus";
 import { clearCurrentUsername } from "../store/userStore";
 import TickerRow from "./TickerRow";
+import Logo from "./Logo";
 
 interface Props {
   username: string;
@@ -38,18 +39,6 @@ export default function Dashboard({ username, token, onLogout }: Props) {
   const [userTickers, setUserTickers] = useState<string[]>([]);
   const [sortKey, setSortKey] = useState<"ticker" | "changePct" | "perf5d" | "perfYtd">("ticker");
   const [sortDir, setSortDir] = useState<1 | -1>(1);
-  const headerWrapperRef = useRef<HTMLDivElement>(null);
-  const bodyWrapperRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const body = bodyWrapperRef.current;
-    const header = headerWrapperRef.current;
-    if (!body || !header) return;
-    const sync = () => { header.scrollLeft = body.scrollLeft; };
-    body.addEventListener("scroll", sync);
-    return () => body.removeEventListener("scroll", sync);
-  }, []);
-
   // menu
   const menuRef = useRef<HTMLButtonElement>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
@@ -222,7 +211,8 @@ export default function Dashboard({ username, token, onLogout }: Props) {
       {/* Header */}
       <header className="topbar">
         <div className="topbar-left">
-          <span className="logo-text">finpipe</span>
+          <Logo />
+          <span className="logo-text">finpipe faucet</span>
         </div>
         <div className="topbar-center">
           <div className="search-wrap">
@@ -316,61 +306,45 @@ export default function Dashboard({ username, token, onLogout }: Props) {
             <p className="empty-state__title">waiting for data…</p>
           </div>
         ) : (
-          <div className="table-container">
-            <div className="table-header-wrapper" ref={headerWrapperRef}>
-              <table className="stock-table">
-                <colgroup>
-                  <col style={{ width: "80px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "90px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "90px" }} />
-                  <col style={{ width: "36px" }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th className={`th th--sortable${sortKey === "ticker" ? " th--active" : ""}`} onClick={() => toggleSort("ticker")}>ticker {sortKey === "ticker" && sortDir === -1 ? "↓" : ""}</th>
-                    <th className="th th--right">price</th>
-                    <th className="th th--right">change</th>
-                    <th className={`th th--right th--sortable${sortKey === "changePct" ? " th--active" : ""}`} onClick={() => toggleSort("changePct")}>change % {sortKey === "changePct" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
-                    <th className={`th th--right th--sortable${sortKey === "perf5d" ? " th--active" : ""}`} onClick={() => toggleSort("perf5d")}>5d % {sortKey === "perf5d" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
-                    <th className={`th th--right th--sortable${sortKey === "perfYtd" ? " th--active" : ""}`} onClick={() => toggleSort("perfYtd")}>ytd % {sortKey === "perfYtd" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
-                    <th className="th th--right">volume</th>
-                    <th className="th" />
-                  </tr>
-                </thead>
-              </table>
-            </div>
-            <div className="table-wrapper" ref={bodyWrapperRef}>
-              <table className="stock-table">
-                <colgroup>
-                  <col style={{ width: "80px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "90px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "100px" }} />
-                  <col style={{ width: "90px" }} />
-                  <col style={{ width: "36px" }} />
-                </colgroup>
-                <tbody>
-                {displayList.map((ticker) => (
-                  <TickerRow
-                    key={ticker}
-                    ticker={ticker}
-                    tick={ticks[ticker]}
-                    prevPrice={prevPrices.current[ticker]}
-                    onRemove={async () => {
-                      await fetch(`${API}/external/tickers/${ticker}`, { method: "DELETE", headers: authHeader });
-                      await fetchUserTickers();
-                    }}
-                  />
-                ))}
-                </tbody>
-              </table>
-            </div>
+          <div className="table-wrapper">
+            <table className="stock-table">
+              <colgroup>
+                <col style={{ width: "80px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "90px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "100px" }} />
+                <col style={{ width: "90px" }} />
+                <col style={{ width: "36px" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th className={`th th--sortable${sortKey === "ticker" ? " th--active" : ""}`} onClick={() => toggleSort("ticker")}>ticker {sortKey === "ticker" && sortDir === -1 ? "↓" : ""}</th>
+                  <th className="th th--right">price</th>
+                  <th className="th th--right">change</th>
+                  <th className={`th th--right th--sortable${sortKey === "changePct" ? " th--active" : ""}`} onClick={() => toggleSort("changePct")}>change % {sortKey === "changePct" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
+                  <th className={`th th--right th--sortable${sortKey === "perf5d" ? " th--active" : ""}`} onClick={() => toggleSort("perf5d")}>5d % {sortKey === "perf5d" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
+                  <th className={`th th--right th--sortable${sortKey === "perfYtd" ? " th--active" : ""}`} onClick={() => toggleSort("perfYtd")}>ytd % {sortKey === "perfYtd" ? (sortDir === 1 ? "↑" : "↓") : ""}</th>
+                  <th className="th th--right">volume</th>
+                  <th className="th" />
+                </tr>
+              </thead>
+              <tbody>
+              {displayList.map((ticker) => (
+                <TickerRow
+                  key={ticker}
+                  ticker={ticker}
+                  tick={ticks[ticker]}
+                  prevPrice={prevPrices.current[ticker]}
+                  onRemove={async () => {
+                    await fetch(`${API}/external/tickers/${ticker}`, { method: "DELETE", headers: authHeader });
+                    await fetchUserTickers();
+                  }}
+                />
+              ))}
+              </tbody>
+            </table>
           </div>
         )}
       </main>

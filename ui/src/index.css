@@ -138,6 +138,7 @@ html, body, #root {
 }
 .text-input:focus { border-color: var(--border-focus); }
 .text-input::placeholder { color: var(--text-muted); }
+input[type="password"] { letter-spacing: 0.2em; font-size: 16px; }
 
 .field-error {
   color: var(--red);
@@ -348,24 +349,30 @@ html, body, #root {
   .stock-table { min-width: 480px; }
 }
 
-/* ── Topbar — mobile two-row layout ── */
+/* ── Topbar — mobile three-row layout ── */
 @media (max-width: 640px) {
   .topbar {
     flex-wrap: wrap;
     height: auto;
     padding: 10px 12px;
-    gap: 10px;
+    gap: 0;
     row-gap: 8px;
   }
 
-  /* Row 1: logo | status | actions */
-  .topbar-left   { order: 1; flex: 1; }
-  .topbar-status { order: 2; }
-  .topbar-right  { order: 3; gap: 8px; margin-left: auto; }
+  /* Row 1: logo + title (left) | username + menu (right) */
+  .topbar-left  { order: 1; flex: 1; }
+  .topbar-right { order: 1; gap: 8px; }
 
-  /* Row 2: search full width, centered */
+  /* Row 2: market status right-aligned */
+  .topbar-status {
+    order: 2;
+    flex: 1 1 100%;
+    justify-content: flex-end;
+  }
+
+  /* Row 3: search full width */
   .topbar-center {
-    order: 4;
+    order: 3;
     flex: 1 1 100%;
     justify-content: center;
   }
@@ -459,7 +466,7 @@ html, body, #root {
   border-radius: 50%;
   flex-shrink: 0;
 }
-.dot--green  { background: var(--green); box-shadow: 0 0 5px var(--green); }
+.dot--green  { background: var(--green); }
 .dot--yellow { background: var(--yellow); }
 .dot--red    { background: var(--red); }
 .dot--purple { background: #a78bfa; }
@@ -517,25 +524,13 @@ html, body, #root {
 }
 
 /* ── Stock table ── */
-.table-container {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  background: var(--bg-surface);
-}
-
-.table-header-wrapper {
-  overflow: hidden;
-  flex-shrink: 0;
-  background: var(--bg-elevated);
-}
-
 .table-wrapper {
   flex: 1;
   overflow: auto;
+  overscroll-behavior: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-surface);
   scrollbar-color: var(--border) var(--bg-surface);
 }
 
@@ -561,6 +556,9 @@ html, body, #root {
   border-bottom: 1px solid var(--border);
   background: var(--bg-elevated);
   white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 2;
 }
 
 .th:first-child {

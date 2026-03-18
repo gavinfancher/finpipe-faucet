@@ -4,7 +4,7 @@ Previous day close fetching and tick enrichment.
 
 import asyncio
 import logging
-from datetime import date
+from datetime import date, datetime, timezone
 
 import httpx
 
@@ -38,9 +38,14 @@ async def fetch_closes(ticker: str) -> tuple[float | None, float | None, float |
         )
         r.raise_for_status()
         results = r.json().get("results") or []
-        prev  = results[-1]["c"] if results else None
-        ytd   = results[0]["c"]  if results else None
-        close_5d = results[-6]["c"] if len(results) >= 6 else None
+        if not results:
+            return None, None, None
+        # Drop today's partial bar if the last bar's date is today
+        last_bar_date = datetime.fromtimestamp(results[-1]["t"] / 1000, tz=timezone.utc).date()
+        bars = results[:-1] if last_bar_date == today else results
+        prev     = bars[-1]["c"] if bars else None
+        ytd      = bars[0]["c"]  if bars else None
+        close_5d = bars[-6]["c"] if len(bars) >= 6 else None
         return prev, ytd, close_5d
     except Exception as e:
         logger.warning("closes fetch failed for %s: %s", ticker, e)

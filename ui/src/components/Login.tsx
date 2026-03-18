@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { setCurrentUsername, setToken } from "../store/userStore";
+import Logo from "./Logo";
 
 const API = `http://${window.location.hostname}:8080`;
 
@@ -76,7 +77,8 @@ export default function Login({ onLogin }: Props) {
     <div className="login-page">
       <div className="login-card">
         <div className="login-logo">
-          <span className="logo-text">finpipe</span>
+          <Logo />
+          <span className="logo-text">finpipe faucet</span>
         </div>
         <p className="login-subtitle">real-time market data</p>
 
