@@ -147,6 +147,7 @@ export default function Dashboard({ username, token, onLogout }: Props) {
       return;
     }
     await fetch(`${API}/external/tickers/${ticker}`, { method: "POST", headers: authHeader });
+    await fetchUserTickers();
     showFeedback(`${ticker} added`, true);
     setSearchQuery("");
   }

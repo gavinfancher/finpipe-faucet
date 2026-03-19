@@ -39,6 +39,8 @@ async def close():
         await _pool.close()
 
 
+
+
 # --- auth ---
 
 async def create_user(username: str, password_hash: str) -> bool:
@@ -105,6 +107,8 @@ async def add_user_ticker(username: str, ticker: str) -> list[str]:
         user_id = await conn.fetchval(
             "select id from users where username = $1", username
         )
+        if user_id is None:
+            raise ValueError(f"user not found: {username}")
         await conn.execute(
             "insert into user_tickers (user_id, ticker) values ($1, $2) on conflict do nothing",
             user_id,

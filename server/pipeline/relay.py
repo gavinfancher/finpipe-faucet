@@ -59,6 +59,6 @@ async def run(startup_tickers: list[str]):
         except asyncio.CancelledError:
             raise
         except Exception as e:
-            logger.error("relay: disconnected (%s), retrying in 3s", e)
+            logger.warning("relay: disconnected (%s), retrying in 3s", e)
             state._consumer_ws = None
         await asyncio.sleep(3)
