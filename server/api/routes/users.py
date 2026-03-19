@@ -7,7 +7,7 @@ import server.auth as auth
 import server.db as db
 from server.api.deps import get_current_user, get_current_user_flexible
 from server.pipeline import state
-from server.pipeline.enrichment import fetch_closes
+from server.pipeline.enrichment import _fetch_closes, _trading_dates
 from server.pipeline.relay import send_to_consumer
 
 router = APIRouter()
@@ -35,13 +35,14 @@ async def add_ticker(ticker: str, current_user: str = Depends(get_current_user))
     logger.info("%s added %s", current_user, ticker, extra={"tags": {"username": current_user, "action": "ticker_added", "ticker": ticker}})
     await send_to_consumer({"action": "subscribe", "ticker": ticker})
     if ticker not in state.prev_closes:
-        prev, ytd, close_5d = await fetch_closes(ticker)
+        prev_date, date_5d, ytd_date = _trading_dates()
+        prev, close_5d, ytd = await _fetch_closes(ticker, prev_date, date_5d, ytd_date)
         if prev is not None:
             state.prev_closes[ticker] = prev
-        if ytd is not None:
-            state.closes_ytd[ticker] = ytd
         if close_5d is not None:
             state.closes_5d[ticker] = close_5d
+        if ytd is not None:
+            state.closes_ytd[ticker] = ytd
     return {"message": "success"}
 
 
@@ -68,13 +69,14 @@ async def patch_tickers(
     for ticker in add:
         await send_to_consumer({"action": "subscribe", "ticker": ticker})
         if ticker not in state.prev_closes:
-            prev, ytd, close_5d = await fetch_closes(ticker)
+            prev_date, date_5d, ytd_date = _trading_dates()
+            prev, close_5d, ytd = await _fetch_closes(ticker, prev_date, date_5d, ytd_date)
             if prev is not None:
                 state.prev_closes[ticker] = prev
-            if ytd is not None:
-                state.closes_ytd[ticker] = ytd
             if close_5d is not None:
                 state.closes_5d[ticker] = close_5d
+            if ytd is not None:
+                state.closes_ytd[ticker] = ytd
     return {"message": "success"}
 
 
