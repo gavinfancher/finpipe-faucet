@@ -6,9 +6,22 @@ export interface StockTick {
   changePct: number;
   prevClose?: number;
   perf5d?: number;
+  perf1m?: number;
+  perf3m?: number;
+  perf6m?: number;
+  perf1y?: number;
   perfYtd?: number;
+  perf3y?: number;
   timestamp: number;
   volume?: number;
+}
+
+export interface Position {
+  id: number;
+  ticker: string;
+  shares: number;
+  cost_basis: number;
+  opened_at: string;
 }
 
 export interface SnapshotMessage {

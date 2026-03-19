@@ -14,7 +14,7 @@ import server.db as db
 from server.logging_config import configure_logging
 from server.pipeline import relay
 from server.pipeline.enrichment import load_prev_closes
-from server.api.routes import auth, internal, users, ws
+from server.api.routes import auth, internal, positions, users, ws
 
 configure_logging()
 logger = logging.getLogger(__name__)
@@ -48,6 +48,7 @@ app.add_middleware(
 
 app.include_router(auth.router, prefix="/external")
 app.include_router(users.router, prefix="/external")
+app.include_router(positions.router, prefix="/external")
 app.include_router(ws.router)
 app.include_router(internal.router, prefix="/internal")
 

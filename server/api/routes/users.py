@@ -7,7 +7,7 @@ import server.auth as auth
 import server.db as db
 from server.api.deps import get_current_user, get_current_user_flexible
 from server.pipeline import state
-from server.pipeline.enrichment import _fetch_closes, _trading_dates
+from server.pipeline.enrichment import _STATE_MAP, _fetch_closes, _trading_dates
 from server.pipeline.relay import send_to_consumer
 
 router = APIRouter()
@@ -35,14 +35,12 @@ async def add_ticker(ticker: str, current_user: str = Depends(get_current_user))
     logger.info("%s added %s", current_user, ticker, extra={"tags": {"username": current_user, "action": "ticker_added", "ticker": ticker}})
     await send_to_consumer({"action": "subscribe", "ticker": ticker})
     if ticker not in state.prev_closes:
-        prev_date, date_5d, ytd_date = _trading_dates()
-        prev, close_5d, ytd = await _fetch_closes(ticker, prev_date, date_5d, ytd_date)
-        if prev is not None:
-            state.prev_closes[ticker] = prev
-        if close_5d is not None:
-            state.closes_5d[ticker] = close_5d
-        if ytd is not None:
-            state.closes_ytd[ticker] = ytd
+        closes = await _fetch_closes(ticker, _trading_dates())
+        if closes["prev"] is not None:
+            state.prev_closes[ticker] = closes["prev"]
+        for period, attr in _STATE_MAP:
+            if closes[period] is not None:
+                getattr(state, attr)[ticker] = closes[period]
     return {"message": "success"}
 
 
@@ -69,14 +67,12 @@ async def patch_tickers(
     for ticker in add:
         await send_to_consumer({"action": "subscribe", "ticker": ticker})
         if ticker not in state.prev_closes:
-            prev_date, date_5d, ytd_date = _trading_dates()
-            prev, close_5d, ytd = await _fetch_closes(ticker, prev_date, date_5d, ytd_date)
-            if prev is not None:
-                state.prev_closes[ticker] = prev
-            if close_5d is not None:
-                state.closes_5d[ticker] = close_5d
-            if ytd is not None:
-                state.closes_ytd[ticker] = ytd
+            closes = await _fetch_closes(ticker, _trading_dates())
+            if closes["prev"] is not None:
+                state.prev_closes[ticker] = closes["prev"]
+            for period, attr in _STATE_MAP:
+                if closes[period] is not None:
+                    getattr(state, attr)[ticker] = closes[period]
     return {"message": "success"}
 
 

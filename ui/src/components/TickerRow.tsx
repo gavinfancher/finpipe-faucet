@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import type { StockTick } from "../types";
 
+export type WLColKey = "price" | "change" | "changePct" | "perf5d" | "perf1m" | "perf3m" | "perf6m" | "perfYtd" | "perf1y" | "perf3y" | "volume";
+
 function formatVol(v: number): string {
   if (v >= 1_000_000) return `${(v / 1_000_000).toFixed(2)}M`;
   if (v >= 1_000) return `${(v / 1_000).toFixed(1)}K`;
@@ -12,14 +14,14 @@ interface Props {
   ticker: string;
   tick?: StockTick;
   prevPrice?: number;
+  visibleCols: WLColKey[];
   onRemove: () => void;
 }
 
 interface DropdownPos { top: number; right: number; }
 
-export default function TickerRow({ ticker, tick, prevPrice, onRemove }: Props) {
+export default function TickerRow({ ticker, tick, prevPrice, visibleCols, onRemove }: Props) {
   const up = (tick?.changePct ?? 0) >= 0;
-  const changeColor = tick ? (up ? "var(--green)" : "var(--red)") : "var(--fg-muted)";
   const priceFlashClass =
     tick && prevPrice !== undefined && prevPrice !== tick.price
       ? tick.price > prevPrice ? "price-flash-up" : "price-flash-down"
@@ -28,7 +30,6 @@ export default function TickerRow({ ticker, tick, prevPrice, onRemove }: Props) 
   const [dropdownPos, setDropdownPos] = useState<DropdownPos | null>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
-  // Close on outside click or scroll
   useEffect(() => {
     if (!dropdownPos) return;
     function close() { setDropdownPos(null); }
@@ -44,59 +45,50 @@ export default function TickerRow({ ticker, tick, prevPrice, onRemove }: Props) 
     e.stopPropagation();
     if (dropdownPos) { setDropdownPos(null); return; }
     const rect = triggerRef.current!.getBoundingClientRect();
-    setDropdownPos({
-      top: rect.bottom + 4,
-      right: window.innerWidth - rect.right,
-    });
+    setDropdownPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
   }
 
-  const dropdown = dropdownPos && createPortal(
-    <div
-      className="row-menu-dropdown"
-      style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right }}
-      onPointerDown={(e) => e.stopPropagation()}
-    >
-      <button
-        className="row-menu-item row-menu-item--danger"
-        onClick={() => { setDropdownPos(null); onRemove(); }}
-      >
-        remove from watchlist
-      </button>
-    </div>,
-    document.body
-  );
+  function renderCell(key: WLColKey) {
+    const green = "var(--green)", red = "var(--red)", muted = "var(--fg-muted)";
+    if (!tick) return <span style={{ color: muted }}>—</span>;
+    switch (key) {
+      case "price":
+        return <span className={priceFlashClass}>${tick.price.toFixed(2)}</span>;
+      case "change": {
+        const c = up ? green : red;
+        return <span style={{ color: c }}>{`${up ? "+" : ""}${tick.change.toFixed(2)}`}</span>;
+      }
+      case "changePct": {
+        const c = up ? green : red;
+        return <span style={{ color: c }}>{`${up ? "+" : ""}${tick.changePct.toFixed(3)}%`}</span>;
+      }
+      case "volume":
+        return tick.volume != null ? <>{formatVol(tick.volume)}</> : <span style={{ color: muted }}>—</span>;
+      default: {
+        const val = (tick as Record<string, number | undefined>)[key];
+        if (val == null) return <span style={{ color: muted }}>—</span>;
+        const c = val >= 0 ? green : red;
+        return <span style={{ color: c }}>{`${val >= 0 ? "+" : ""}${val.toFixed(3)}%`}</span>;
+      }
+    }
+  }
 
   return (
     <tr className="ticker-row">
       <td className="cell cell--ticker">{ticker}</td>
-      <td className="cell cell--price">
-        <span className={priceFlashClass}>{tick ? `$${tick.price.toFixed(2)}` : "—"}</span>
-      </td>
-      <td className="cell cell--num" style={{ color: changeColor }}>
-        {tick ? `${up ? "+" : ""}${tick.change.toFixed(2)}` : "—"}
-      </td>
-      <td className="cell cell--num" style={{ color: changeColor }}>
-        {tick ? `${up ? "+" : ""}${tick.changePct.toFixed(3)}%` : "—"}
-      </td>
-      <td className="cell cell--num" style={{ color: tick?.perf5d != null ? (tick.perf5d >= 0 ? "var(--green)" : "var(--red)") : "var(--fg-muted)" }}>
-        {tick?.perf5d != null ? `${tick.perf5d >= 0 ? "+" : ""}${tick.perf5d.toFixed(3)}%` : "—"}
-      </td>
-      <td className="cell cell--num" style={{ color: tick?.perfYtd != null ? (tick.perfYtd >= 0 ? "var(--green)" : "var(--red)") : "var(--fg-muted)" }}>
-        {tick?.perfYtd != null ? `${tick.perfYtd >= 0 ? "+" : ""}${tick.perfYtd.toFixed(3)}%` : "—"}
-      </td>
-      <td className="cell cell--num cell--muted">
-        {tick?.volume != null ? formatVol(tick.volume) : "—"}
-      </td>
+      {visibleCols.map((key) => (
+        <td key={key} className="cell cell--num">{renderCell(key)}</td>
+      ))}
       <td className="cell cell--action">
-        <button
-          ref={triggerRef}
-          className="row-menu-trigger"
-          onClick={openMenu}
-          aria-label="row options"
-        >
-          ⋮
-        </button>
-        {dropdown}
+        <button ref={triggerRef} className="row-menu-trigger" onClick={openMenu} aria-label="row options">⋮</button>
+        {dropdownPos && createPortal(
+          <div className="row-menu-dropdown" style={{ position: "fixed", top: dropdownPos.top, right: dropdownPos.right }} onPointerDown={(e) => e.stopPropagation()}>
+            <button className="row-menu-item row-menu-item--danger" onClick={() => { setDropdownPos(null); onRemove(); }}>
+              remove from watchlist
+            </button>
+          </div>,
+          document.body
+        )}
       </td>
     </tr>
   );

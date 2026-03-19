@@ -32,6 +32,16 @@ async def init():
                 primary key (user_id, ticker)
             )
         """)
+        await conn.execute("""
+            create table if not exists positions (
+                id         serial primary key,
+                user_id    integer not null references users(id) on delete cascade,
+                ticker     varchar(10) not null,
+                shares     numeric not null,
+                cost_basis numeric not null,
+                opened_at  timestamptz not null default now()
+            )
+        """)
 
 
 async def close():
@@ -150,10 +160,101 @@ async def patch_user_tickers(username: str, add: list[str], remove: list[str]) -
     return await get_user_tickers(username)
 
 
-async def get_all_tickers() -> list[str]:
-    """Union of every ticker across all users — used for warm startup."""
+# --- positions ---
+
+async def get_positions(username: str) -> list[dict]:
     async with _pool.acquire() as conn:
         rows = await conn.fetch(
-            "select distinct ticker from user_tickers order by ticker"
+            """
+            select p.id, p.ticker, p.shares, p.cost_basis, p.opened_at
+            from positions p
+            join users u on u.id = p.user_id
+            where u.username = $1
+            order by p.opened_at
+            """,
+            username,
+        )
+    return [
+        {
+            "id": r["id"],
+            "ticker": r["ticker"],
+            "shares": float(r["shares"]),
+            "cost_basis": float(r["cost_basis"]),
+            "opened_at": r["opened_at"].isoformat(),
+        }
+        for r in rows
+    ]
+
+
+async def add_position(username: str, ticker: str, shares: float, cost_basis: float) -> dict:
+    async with _pool.acquire() as conn:
+        user_id = await conn.fetchval("select id from users where username = $1", username)
+        if user_id is None:
+            raise ValueError(f"user not found: {username}")
+        row = await conn.fetchrow(
+            """
+            insert into positions (user_id, ticker, shares, cost_basis)
+            values ($1, $2, $3, $4)
+            returning id, ticker, shares, cost_basis, opened_at
+            """,
+            user_id, ticker, shares, cost_basis,
+        )
+    return {
+        "id": row["id"],
+        "ticker": row["ticker"],
+        "shares": float(row["shares"]),
+        "cost_basis": float(row["cost_basis"]),
+        "opened_at": row["opened_at"].isoformat(),
+    }
+
+
+async def update_position(username: str, position_id: int, shares: float, cost_basis: float) -> dict | None:
+    async with _pool.acquire() as conn:
+        row = await conn.fetchrow(
+            """
+            update positions p
+            set shares = $3, cost_basis = $4
+            from users u
+            where u.id = p.user_id and u.username = $1 and p.id = $2
+            returning p.id, p.ticker, p.shares, p.cost_basis, p.opened_at
+            """,
+            username, position_id, shares, cost_basis,
+        )
+    if row is None:
+        return None
+    return {
+        "id": row["id"],
+        "ticker": row["ticker"],
+        "shares": float(row["shares"]),
+        "cost_basis": float(row["cost_basis"]),
+        "opened_at": row["opened_at"].isoformat(),
+    }
+
+
+async def delete_position(username: str, position_id: int) -> bool:
+    async with _pool.acquire() as conn:
+        result = await conn.execute(
+            """
+            delete from positions p
+            using users u
+            where u.id = p.user_id and u.username = $1 and p.id = $2
+            """,
+            username, position_id,
+        )
+    return result == "DELETE 1"
+
+
+# --- startup ---
+
+async def get_all_tickers() -> list[str]:
+    """Union of watchlist and position tickers across all users — used for warm startup."""
+    async with _pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            select distinct ticker from user_tickers
+            union
+            select distinct ticker from positions
+            order by ticker
+            """
         )
     return [r["ticker"] for r in rows]
