@@ -48,6 +48,14 @@ const API = `http://${window.location.hostname}:8080`;
 const fmt = (n: number, decimals = 2) =>
   n.toLocaleString("en-US", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 
+function fmtPct(v: number): string {
+  const abs = Math.abs(v);
+  const sign = v >= 0 ? "+" : "\u2212";
+  if (abs >= 1000) return sign + (abs / 1000).toFixed(2) + "k";
+  const d = abs >= 100 ? 1 : abs >= 10 ? 2 : 3;
+  return sign + abs.toFixed(d);
+}
+
 const perfColor = (n: number) => (n >= 0 ? "var(--green)" : "var(--red)");
 const sign = (n: number) => (n >= 0 ? "+" : "");
 
@@ -68,7 +76,7 @@ function cellContent(key: ColKey, r: Row) {
   }
   if (key === "dayPlPct") {
     const color = r.dayPlPct !== null ? perfColor(r.dayPlPct) : muted;
-    return <span style={{ color }}>{r.dayPlPct !== null ? `${sign(r.dayPlPct)}${fmt(r.dayPlPct)}%` : "—"}</span>;
+    return <span style={{ color }}>{r.dayPlPct !== null ? `${fmtPct(r.dayPlPct)}%` : "—"}</span>;
   }
   if (key === "totalPl") {
     const color = r.pl !== null ? perfColor(r.pl) : muted;
@@ -76,7 +84,7 @@ function cellContent(key: ColKey, r: Row) {
   }
   if (key === "totalPlPct") {
     const color = r.plPct !== null ? perfColor(r.plPct) : muted;
-    return <span style={{ color }}>{r.plPct !== null ? `${sign(r.plPct)}${fmt(r.plPct)}%` : "—"}</span>;
+    return <span style={{ color }}>{r.plPct !== null ? `${fmtPct(r.plPct)}%` : "—"}</span>;
   }
 }
 
@@ -92,7 +100,7 @@ export default function PositionsTab({ token, ticks }: Props) {
   const [submitting, setSubmitting] = useState(false);
 
   // edit modal
-  const [editModal, setEditModal] = useState<{ id: number; ticker: string; shares: string; total_cost: string; top: number; right: number } | null>(null);
+  const [editModal, setEditModal] = useState<{ id: number; ticker: string; shares: string; total_cost: string } | null>(null);
   const [editSaving, setEditSaving] = useState(false);
 
   // row dropdown
@@ -190,14 +198,10 @@ export default function PositionsTab({ token, ticks }: Props) {
 
   function openEdit(p: Position) {
     setDropdownId(null); setDropdownPos(null);
-    const btn = triggerRefs.current.get(p.id);
-    const rect = btn ? btn.getBoundingClientRect() : { bottom: 100, right: window.innerWidth - 200 };
     setEditModal({
       id: p.id, ticker: p.ticker,
       shares: String(p.shares),
       total_cost: String(+(p.shares * p.cost_basis).toFixed(4)),
-      top: rect.bottom + 4,
-      right: window.innerWidth - (btn ? rect.right : rect.right),
     });
   }
 
@@ -313,9 +317,9 @@ export default function PositionsTab({ token, ticks }: Props) {
         <div className="table-wrapper">
           <table className="stock-table">
             <colgroup>
-              <col style={{ width: "70px" }} />
-              {visibleCols.map((c) => <col key={c.key} style={{ width: "110px" }} />)}
-              <col style={{ width: "36px" }} />
+              <col className="col--ticker" />
+              {visibleCols.map((c) => <col key={c.key} className="col--data col--data-wide" />)}
+              <col className="col--action" />
             </colgroup>
             <thead>
               <tr>
@@ -327,7 +331,7 @@ export default function PositionsTab({ token, ticks }: Props) {
                     {c.label} {sortKey === c.key ? (sortDir === 1 ? "↑" : "↓") : ""}
                   </th>
                 ))}
-                <th className="th">
+                <th className="th th--action">
                   <button ref={colBtnRef} className="col-config-btn" onClick={openColPanel} title="configure columns">
                     <svg width="11" height="11" viewBox="0 0 16 16" fill="currentColor"><path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168l10-10zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325z"/></svg>
                   </button>
@@ -364,24 +368,36 @@ export default function PositionsTab({ token, ticks }: Props) {
 
       {/* Edit modal */}
       {editModal && createPortal(
-        <div className="edit-modal" style={{ position: "fixed", top: editModal.top, right: editModal.right }} onPointerDown={(e) => e.stopPropagation()}>
-          <div className="edit-modal__title">{editModal.ticker}</div>
-          <div className="edit-modal__fields">
-            <input className="position-form__input" placeholder="shares" type="number" min="0" step="any"
-              value={editModal.shares}
-              onChange={(e) => setEditModal((m) => m && ({ ...m, shares: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditModal(null); }}
-              autoFocus
-            />
-            <input className="position-form__input" placeholder="total cost" type="number" min="0" step="any"
-              value={editModal.total_cost}
-              onChange={(e) => setEditModal((m) => m && ({ ...m, total_cost: e.target.value }))}
-              onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditModal(null); }}
-            />
-          </div>
-          <div className="edit-modal__actions">
-            <button className="btn-primary btn-primary--sm" onClick={handleSaveEdit} disabled={editSaving}>{editSaving ? "saving…" : "save"}</button>
-            <button className="btn-ghost btn-ghost--sm" onClick={() => setEditModal(null)}>cancel</button>
+        <div className="edit-modal-overlay" onPointerDown={() => setEditModal(null)}>
+          <div className="edit-modal" onPointerDown={(e) => e.stopPropagation()}>
+            <div className="edit-modal__title">{editModal.ticker}</div>
+            <div className="edit-modal__fields">
+              <label className="edit-modal__label">
+                shares
+                <input className="position-form__input" type="number" min="0" step="any"
+                  value={editModal.shares}
+                  onChange={(e) => setEditModal((m) => m && ({ ...m, shares: e.target.value }))}
+                  onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditModal(null); }}
+                  autoFocus
+                />
+              </label>
+              <label className="edit-modal__label">
+                total cost
+                <div className="edit-modal__input-wrap">
+                  <span className="edit-modal__prefix">$</span>
+                  <input className="position-form__input" type="number" min="0" step="0.01"
+                    value={editModal.total_cost}
+                    onChange={(e) => setEditModal((m) => m && ({ ...m, total_cost: e.target.value }))}
+                    onBlur={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) setEditModal((m) => m && ({ ...m, total_cost: v.toFixed(2) })); }}
+                    onKeyDown={(e) => { if (e.key === "Enter") handleSaveEdit(); if (e.key === "Escape") setEditModal(null); }}
+                  />
+                </div>
+              </label>
+            </div>
+            <div className="edit-modal__actions">
+              <button className="btn-primary btn-primary--sm" onClick={handleSaveEdit} disabled={editSaving}>{editSaving ? "saving…" : "save"}</button>
+              <button className="btn-ghost btn-ghost--sm" onClick={() => setEditModal(null)}>cancel</button>
+            </div>
           </div>
         </div>,
         document.body

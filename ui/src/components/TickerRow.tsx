@@ -10,6 +10,14 @@ function formatVol(v: number): string {
   return v.toString();
 }
 
+function fmtPct(v: number): string {
+  const abs = Math.abs(v);
+  const sign = v >= 0 ? "+" : "\u2212";
+  if (abs >= 1000) return sign + (abs / 1000).toFixed(2) + "k";
+  const d = abs >= 100 ? 1 : abs >= 10 ? 2 : 3;
+  return sign + abs.toFixed(d);
+}
+
 interface Props {
   ticker: string;
   tick?: StockTick;
@@ -60,7 +68,7 @@ export default function TickerRow({ ticker, tick, prevPrice, visibleCols, onRemo
       }
       case "changePct": {
         const c = up ? green : red;
-        return <span style={{ color: c }}>{`${up ? "+" : ""}${tick.changePct.toFixed(3)}%`}</span>;
+        return <span style={{ color: c }}>{`${fmtPct(tick.changePct)}%`}</span>;
       }
       case "volume":
         return tick.volume != null ? <>{formatVol(tick.volume)}</> : <span style={{ color: muted }}>—</span>;
@@ -68,7 +76,7 @@ export default function TickerRow({ ticker, tick, prevPrice, visibleCols, onRemo
         const val = (tick as Record<string, number | undefined>)[key];
         if (val == null) return <span style={{ color: muted }}>—</span>;
         const c = val >= 0 ? green : red;
-        return <span style={{ color: c }}>{`${val >= 0 ? "+" : ""}${val.toFixed(3)}%`}</span>;
+        return <span style={{ color: c }}>{`${fmtPct(val)}%`}</span>;
       }
     }
   }
